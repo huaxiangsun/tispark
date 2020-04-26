@@ -1,7 +1,7 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, TiContext}
+import org.apache.spark.sql._
 
 object TiDBWriter {
 
@@ -9,7 +9,8 @@ object TiDBWriter {
             sqlContext: SQLContext,
             saveMode: SaveMode,
             options: TiDBOptions): Unit = {
-    val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
+    val sparkSession = sqlContext.sparkSession
+    val tiContext = TiExtensions.getInstance(sparkSession).getOrCreateTiContext(sparkSession)
     val conn = TiDBUtils.createConnectionFactory(options.url)()
 
     try {

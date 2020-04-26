@@ -15,9 +15,10 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, TiContext}
+import org.apache.spark.sql._
 
 /**
  * TiDB Source implementation for Spark SQL
@@ -39,8 +40,13 @@ class TiDBDataSource
                               parameters: Map[String, String]): BaseRelation = {
 
     val options = new TiDBOptions(parameters)
-    val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-    TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession, tiContext)
+    val sparkSession = sqlContext.sparkSession
+
+    if (!TiExtensions.enabled()) {
+      throw new TiBatchWriteException("TiExtensions is disable!")
+    }
+
+    val tiContext = TiExtensions.getInstance(sparkSession).getOrCreateTiContext(sparkSession)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
     TiDBRelation(
       tiContext.tiSession,
